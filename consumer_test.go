@@ -39,7 +39,7 @@ func TestConsumer(t *testing.T) {
 		BackoffDisabled: true,
 		NsqLogger:       logger.NewZap("nsq-consumer", "error"),
 		MsgLogger:       logger.NewZap("mq-consumer", "info"),
-		Handler: func(ctx context.Context, msg string, finished bool) error {
+		Handler: func(ctx context.Context, msg []byte, finished bool) error {
 			fmt.Println("ctx", ctx)
 			fmt.Println("msg", msg)
 			return baseError.System("99", "aaa")

@@ -2,7 +2,6 @@ package nsq
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	baseError "github.com/go-tron/base-error"
@@ -10,9 +9,6 @@ import (
 	"github.com/go-tron/logger"
 	"github.com/jinzhu/copier"
 	"github.com/nsqio/go-nsq"
-	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
-	"github.com/opentracing/opentracing-go/log"
 	"reflect"
 	"time"
 )
@@ -37,7 +33,7 @@ func defaultRetry() *Retry {
 	return NewRetry(time.Second*60, time.Minute*10, 20)
 }
 
-type Handler = func(ctx context.Context, msg string, finished bool) error
+type Handler = func(ctx context.Context, msg []byte, finished bool) error
 
 type ConsumerConfig struct {
 	NsqLookUpAddr    string
@@ -53,7 +49,7 @@ type ConsumerConfig struct {
 	NsqLogger        logger.Logger
 	MsgLogger        logger.Logger
 	Handler          Handler
-	SimpleHandler    func(string) error
+	SimpleHandler    func([]byte) error
 }
 
 type ConsumerOption func(*ConsumerConfig)
@@ -181,43 +177,22 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 			var ignoreErr error
 			var handlerErr error
 			var startTime = time.Now()
-			var message = &Message{
-				Headers: map[string]string{},
-			}
-			var id = fmt.Sprintf("%s", m.ID)
-			var ctx context.Context
-			var span opentracing.Span
 			defer func() {
 				latency := time.Since(startTime).Milliseconds()
 				c.MsgLogger.Info(
-					message.Body,
+					"",
 					c.MsgLogger.Field("time", startTime),
 					c.MsgLogger.Field("latency", latency),
 					c.MsgLogger.Field("topic", c.Topic),
-					c.MsgLogger.Field("id", id),
-					c.MsgLogger.Field("request_id", message.Headers["x-request-id"]),
+					c.MsgLogger.Field("id", fmt.Sprintf("%s", m.ID)),
 					c.MsgLogger.Field("attempts", m.Attempts),
 					c.MsgLogger.Field("ignore_err", ignoreErr),
 					c.MsgLogger.Field("error", handlerErr),
 				)
-
-				if span != nil {
-					if ignoreErr != nil {
-						span.LogFields(log.String("error", ignoreErr.Error()))
-					}
-					if handlerErr != nil {
-						ext.LogError(span, handlerErr)
-					}
-					span.Finish()
-				}
 			}()
 
-			if handlerErr = json.Unmarshal(m.Body, message); handlerErr != nil {
-				return handlerErr
-			}
-			ctx, span = ConsumerTrace(c.Topic, message.Headers)
 			finished := c.Retry.MaxAttempts == m.Attempts
-			if handlerErr = c.Handler(context.WithValue(ctx, "id", id), message.Body, finished); handlerErr != nil {
+			if handlerErr = c.Handler(context.Background(), m.Body, finished); handlerErr != nil {
 				if reflect.TypeOf(handlerErr).String() == "*baseError.Error" && !handlerErr.(*baseError.Error).System {
 					ignoreErr = handlerErr
 					handlerErr = nil
@@ -240,7 +215,7 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 
 	if c.SimpleHandler != nil {
 		consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) (err error) {
-			return c.SimpleHandler(string(m.Body))
+			return c.SimpleHandler(m.Body)
 		}))
 	}
 
@@ -261,26 +236,6 @@ type Consumer struct {
 func (c *Consumer) Disconnect() error {
 	c.Stop()
 	return c.DisconnectFromNSQLookupd(c.NsqLookUpAddr)
-}
-
-func ConsumerTrace(topic string, headers map[string]string) (context.Context, opentracing.Span) {
-	if headers == nil {
-		headers = make(map[string]string)
-	}
-	requestId := headers["x-request-id"]
-	ctx := context.WithValue(context.Background(), "x-request-id", requestId)
-	if tracer := opentracing.GlobalTracer(); tracer != nil {
-		var opts []opentracing.StartSpanOption
-		spanCtx, _ := tracer.Extract(opentracing.TextMap, opentracing.TextMapCarrier(headers))
-		if spanCtx != nil {
-			opts = append(opts, opentracing.ChildOf(spanCtx))
-		}
-		span := tracer.StartSpan(topic+":C", opts...)
-		span.SetTag("x-request-id", requestId)
-		ext.SpanKindConsumer.Set(span)
-		return opentracing.ContextWithSpan(ctx, span), span
-	}
-	return ctx, nil
 }
 
 var PostRetryDelays = []time.Duration{

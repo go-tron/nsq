@@ -17,5 +17,5 @@ func TestProducer(t *testing.T) {
 		MsgLogger: logger.NewZap("mq-producer", "info"),
 	})
 
-	producer.SendSync("test-topic", "hi", WithCtx(context.Background()))
+	producer.SendSync("test-topic", []byte("hi"), WithCtx(context.Background()))
 }
