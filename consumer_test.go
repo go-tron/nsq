@@ -2,8 +2,8 @@ package nsq
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	baseError "github.com/go-tron/base-error"
 	"github.com/go-tron/logger"
 	"github.com/go-tron/tracer"
 	"testing"
@@ -42,7 +42,7 @@ func TestConsumer(t *testing.T) {
 		Handler: func(ctx context.Context, msg []byte, finished bool) error {
 			fmt.Println("ctx", ctx)
 			fmt.Println("msg", msg)
-			return baseError.System("99", "aaa")
+			return errors.New("wsss")
 		},
 	})
 	if err != nil {

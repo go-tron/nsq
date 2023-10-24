@@ -3,14 +3,12 @@ module github.com/go-tron/nsq
 go 1.19
 
 require (
-	github.com/go-tron/base-error v1.0.0
+	github.com/go-tron/base-error v1.0.1
 	github.com/go-tron/config v1.0.0
 	github.com/go-tron/logger v1.0.1
 	github.com/go-tron/tracer v1.0.1
 	github.com/jinzhu/copier v0.4.0
 	github.com/nsqio/go-nsq v1.1.0
-	github.com/opentracing/opentracing-go v1.2.0
-	github.com/satori/go.uuid v1.2.0
 )
 
 require (
@@ -20,6 +18,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/afero v1.9.5 // indirect

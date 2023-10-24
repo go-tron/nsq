@@ -9,9 +9,10 @@ import (
 )
 
 type ProducerConfig struct {
-	NsqdAddr  string
-	NsqLogger logger.Logger
-	MsgLogger logger.Logger
+	NsqdAddr       string
+	NsqLogger      logger.Logger
+	MsgLogger      logger.Logger
+	MsgLoggerLevel string
 }
 
 type ProducerOption func(*ProducerConfig)
@@ -54,6 +55,9 @@ func NewProducer(c *ProducerConfig) *Producer {
 	if c.MsgLogger == nil {
 		panic("MsgLogger 必须设置")
 	}
+	if c.MsgLoggerLevel == "" {
+		c.MsgLoggerLevel = "error"
+	}
 
 	nsqConfig := nsq.NewConfig()
 	producer, err := nsq.NewProducer(c.NsqdAddr, nsqConfig)
@@ -74,18 +78,18 @@ type Producer struct {
 }
 
 func (p *Producer) SendSync(topic string, data []byte, opts ...SendOption) (err error) {
-	var startTime = time.Now()
 	c := &SendConfig{}
 	for _, apply := range opts {
 		apply(c)
 	}
 
 	defer func() {
-		p.MsgLogger.Info("",
-			p.MsgLogger.Field("time", startTime),
-			p.MsgLogger.Field("topic", topic),
-			p.MsgLogger.Field("error", err),
-		)
+		if err != nil || p.MsgLoggerLevel == "info" {
+			p.MsgLogger.Info(string(data),
+				p.MsgLogger.Field("topic", topic),
+				p.MsgLogger.Field("error", err),
+			)
+		}
 	}()
 
 	if c.Delay != 0 {

@@ -13,10 +13,6 @@ import (
 	"time"
 )
 
-var (
-	ErrorReadJSON = baseError.New("1001", "read json failed")
-)
-
 type Retry struct {
 	DefaultRequeueDelay time.Duration
 	MaxRequeueDelay     time.Duration
@@ -48,6 +44,7 @@ type ConsumerConfig struct {
 	BackoffDisabled  bool
 	NsqLogger        logger.Logger
 	MsgLogger        logger.Logger
+	MsgLoggerLevel   string
 	Handler          Handler
 	SimpleHandler    func([]byte) error
 }
@@ -141,6 +138,15 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 	if c.Handler == nil && c.SimpleHandler == nil {
 		return nil, errors.New("Handler 必须设置")
 	}
+	if c.NsqLogger == nil {
+		panic("NsqLogger 必须设置")
+	}
+	if c.MsgLogger == nil {
+		panic("MsgLogger 必须设置")
+	}
+	if c.MsgLoggerLevel == "" {
+		c.MsgLoggerLevel = "error"
+	}
 
 	if c.Name != "" {
 		c.Channel = c.Channel + "-" + c.Name
@@ -179,16 +185,18 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 			var startTime = time.Now()
 			defer func() {
 				latency := time.Since(startTime).Milliseconds()
-				c.MsgLogger.Info(
-					"",
-					c.MsgLogger.Field("time", startTime),
-					c.MsgLogger.Field("latency", latency),
-					c.MsgLogger.Field("topic", c.Topic),
-					c.MsgLogger.Field("id", fmt.Sprintf("%s", m.ID)),
-					c.MsgLogger.Field("attempts", m.Attempts),
-					c.MsgLogger.Field("ignore_err", ignoreErr),
-					c.MsgLogger.Field("error", handlerErr),
-				)
+				if handlerErr != nil || c.MsgLoggerLevel == "info" {
+					c.MsgLogger.Info(
+						string(m.Body),
+						c.MsgLogger.Field("time", startTime),
+						c.MsgLogger.Field("latency", latency),
+						c.MsgLogger.Field("topic", c.Topic),
+						c.MsgLogger.Field("id", fmt.Sprintf("%s", m.ID)),
+						c.MsgLogger.Field("attempts", m.Attempts),
+						c.MsgLogger.Field("ignore_err", ignoreErr),
+						c.MsgLogger.Field("error", handlerErr),
+					)
+				}
 			}()
 
 			finished := c.Retry.MaxAttempts == m.Attempts
