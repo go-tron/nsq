@@ -33,6 +33,7 @@ type Handler = func(ctx context.Context, msg []byte, finished bool) error
 
 type ConsumerConfig struct {
 	NsqLookUpAddr    string
+	NsqdAddr         string
 	Broadcasting     bool
 	Channel          string
 	Name             string
@@ -100,6 +101,7 @@ func ConsumerWithHandler(val Handler) ConsumerOption {
 func defaultConsumerConfig(c *config.Config) *ConsumerConfig {
 	return &ConsumerConfig{
 		NsqLookUpAddr: c.GetString("nsq.nsqLookUpAddr"),
+		NsqdAddr:      c.GetString("nsq.nsqdAddr"),
 		Channel:       c.GetString("application.name"),
 		ServerId:      c.GetString("cluster.nodeName"),
 		NsqLogger:     logger.NewZapWithConfig(c, "nsq-consumer", "error"),
@@ -126,8 +128,8 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 	if c == nil {
 		return nil, errors.New("config 必须设置")
 	}
-	if c.NsqLookUpAddr == "" {
-		return nil, errors.New("NsqLookUpAddr 必须设置")
+	if c.NsqLookUpAddr == "" && c.NsqdAddr == "" {
+		return nil, errors.New("NsqLookUpAddr或NsqdAddr必须设置其一")
 	}
 	if c.Channel == "" {
 		return nil, errors.New("Channel 必须设置")
@@ -227,10 +229,16 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 		}))
 	}
 
-	err = consumer.ConnectToNSQLookupd(c.NsqLookUpAddr)
-	if err != nil {
-		return nil, err
+	if c.NsqLookUpAddr != "" {
+		if err = consumer.ConnectToNSQLookupd(c.NsqLookUpAddr); err != nil {
+			return nil, err
+		}
+	} else {
+		if err = consumer.ConnectToNSQD(c.NsqdAddr); err != nil {
+			return nil, err
+		}
 	}
+
 	return &Consumer{
 		c, consumer,
 	}, nil
