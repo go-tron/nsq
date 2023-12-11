@@ -4,7 +4,9 @@ import (
 	"context"
 	"github.com/go-tron/logger"
 	"github.com/go-tron/tracer"
+	"strconv"
 	"testing"
+	"time"
 )
 
 func TestProducer(t *testing.T) {
@@ -17,5 +19,11 @@ func TestProducer(t *testing.T) {
 		MsgLogger: logger.NewZap("mq-producer", "info"),
 	})
 
-	producer.SendSync("test-topic", []byte("hi"), WithCtx(context.Background()))
+	for i := 0; i < 100; i++ {
+		go func(int2 int) {
+			producer.SendSync("test-topic", []byte("hi"+strconv.Itoa(int2)), WithCtx(context.Background()))
+		}(i)
+	}
+
+	time.Sleep(time.Hour)
 }

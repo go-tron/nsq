@@ -2,7 +2,6 @@ package nsq
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/go-tron/logger"
 	"github.com/go-tron/tracer"
@@ -23,11 +22,14 @@ func TestConsumer(t *testing.T) {
 		time.Second * 5,
 		time.Second * 6,
 	}
+	var i = 0
 	_, err := NewConsumer(&ConsumerConfig{
 		NsqLookUpAddr: "127.0.0.1:4161",
 		Channel:       "test-01",
 		Topic:         "test-topic",
 		//Retry:            NewRetry(time.Second*1, time.Second*1, 5),
+		MaxInFlight:      200,
+		Concurrent:       true,
 		RetryMaxAttempts: 10,
 		RetryStrategy: func(attempts uint16) (delay time.Duration) {
 			var i = int(attempts)
@@ -40,9 +42,10 @@ func TestConsumer(t *testing.T) {
 		NsqLogger:       logger.NewZap("nsq-consumer", "error"),
 		MsgLogger:       logger.NewZap("mq-consumer", "info"),
 		Handler: func(ctx context.Context, msg []byte, finished bool) error {
-			fmt.Println("ctx", ctx)
-			fmt.Println("msg", msg)
-			return errors.New("wsss")
+			i++
+			fmt.Println("msg", i, string(msg))
+			time.Sleep(time.Second * 10)
+			return nil
 		},
 	})
 	if err != nil {

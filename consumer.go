@@ -39,6 +39,8 @@ type ConsumerConfig struct {
 	Name             string
 	ServerId         string
 	Topic            string
+	Concurrent       bool
+	MaxInFlight      int
 	Retry            *Retry
 	RetryMaxAttempts uint16
 	RetryStrategy    func(attempts uint16) (delay time.Duration)
@@ -173,6 +175,9 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 	nsqConfig.MaxRequeueDelay = c.Retry.MaxRequeueDelay
 	nsqConfig.MaxAttempts = c.Retry.MaxAttempts
 
+	if c.MaxInFlight > 0 {
+		nsqConfig.MaxInFlight = c.MaxInFlight
+	}
 	consumer, err := nsq.NewConsumer(c.Topic, c.Channel, nsqConfig)
 	if err != nil {
 		return nil, err
@@ -181,7 +186,7 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 	consumer.SetLogger(Logger(c.NsqLogger), Level(c.NsqLogger))
 
 	if c.Handler != nil {
-		consumer.AddHandler(nsq.HandlerFunc(func(m *nsq.Message) error {
+		h := nsq.HandlerFunc(func(m *nsq.Message) error {
 			var ignoreErr error
 			var handlerErr error
 			var startTime = time.Now()
@@ -220,7 +225,12 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 				return handlerErr
 			}
 			return nil
-		}))
+		})
+		if c.Concurrent {
+			consumer.AddConcurrentHandlers(h, c.MaxInFlight)
+		} else {
+			consumer.AddHandler(h)
+		}
 	}
 
 	if c.SimpleHandler != nil {
