@@ -105,7 +105,7 @@ func defaultConsumerConfig(c *config.Config) *ConsumerConfig {
 		NsqLookUpAddr: c.GetString("nsq.nsqLookUpAddr"),
 		NsqdAddr:      c.GetString("nsq.nsqdAddr"),
 		Channel:       c.GetString("application.name"),
-		ServerId:      c.GetString("cluster.nodeName"),
+		ServerId:      c.GetString("cluster.podName"),
 		NsqLogger:     logger.NewZapWithConfig(c, "nsq-consumer", "error"),
 		MsgLogger:     logger.NewZapWithConfig(c, "mq-consumer", "info"),
 	}
