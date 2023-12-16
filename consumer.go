@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/avast/retry-go/v4"
 	baseError "github.com/go-tron/base-error"
 	"github.com/go-tron/config"
 	"github.com/go-tron/logger"
 	"github.com/jinzhu/copier"
 	"github.com/nsqio/go-nsq"
-	"reflect"
 	"time"
 )
 
@@ -32,24 +32,26 @@ func defaultRetry() *Retry {
 type Handler = func(ctx context.Context, msg []byte, finished bool) error
 
 type ConsumerConfig struct {
-	NsqLookUpAddr    string
-	NsqdAddr         string
-	Broadcasting     bool
-	Channel          string
-	Name             string
-	ServerId         string
-	Topic            string
-	Concurrent       bool
-	MaxInFlight      int
-	Retry            *Retry
-	RetryMaxAttempts uint16
-	RetryStrategy    func(attempts uint16) (delay time.Duration)
-	BackoffDisabled  bool
-	NsqLogger        logger.Logger
-	MsgLogger        logger.Logger
-	MsgLoggerLevel   string
-	Handler          Handler
-	SimpleHandler    func([]byte) error
+	NsqLookUpAddr      string
+	NsqdAddr           string
+	Broadcasting       bool
+	Channel            string
+	Name               string
+	ServerId           string
+	Topic              string
+	Concurrent         bool
+	MaxInFlight        int
+	LocalRetry         retry.DelayTypeFunc
+	LocalRetryAttempts uint
+	Retry              *Retry
+	RetryAttempts      uint16
+	RetryStrategy      func(attempts uint16) (delay time.Duration)
+	BackoffDisabled    bool
+	NsqLogger          logger.Logger
+	MsgLogger          logger.Logger
+	MsgLoggerLevel     string
+	Handler            Handler
+	SimpleHandler      func([]byte) error
 }
 
 type ConsumerOption func(*ConsumerConfig)
@@ -168,8 +170,8 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 	if c.Retry == nil {
 		c.Retry = defaultRetry()
 	}
-	if c.RetryMaxAttempts > 0 {
-		c.Retry.MaxAttempts = c.RetryMaxAttempts
+	if c.RetryAttempts > 0 {
+		c.Retry.MaxAttempts = c.RetryAttempts
 	}
 	nsqConfig.DefaultRequeueDelay = c.Retry.DefaultRequeueDelay
 	nsqConfig.MaxRequeueDelay = c.Retry.MaxRequeueDelay
@@ -206,9 +208,26 @@ func NewConsumer(c *ConsumerConfig) (*Consumer, error) {
 				}
 			}()
 
-			finished := c.Retry.MaxAttempts == m.Attempts
-			if handlerErr = c.Handler(context.Background(), m.Body, finished); handlerErr != nil {
-				if reflect.TypeOf(handlerErr).String() == "*baseError.Error" && !handlerErr.(*baseError.Error).System {
+			finished := nsqConfig.MaxAttempts == m.Attempts
+
+			if c.LocalRetry != nil {
+				handlerErr = retry.Do(
+					func() error {
+						return c.Handler(context.Background(), m.Body, finished)
+					},
+					retry.Attempts(c.LocalRetryAttempts),
+					retry.DelayType(c.LocalRetry),
+					retry.LastErrorOnly(true),
+					retry.RetryIf(func(err error) bool {
+						return baseError.IsSystemError(err)
+					}),
+				)
+			} else {
+				handlerErr = c.Handler(context.Background(), m.Body, finished)
+			}
+
+			if handlerErr != nil {
+				if !baseError.IsSystemError(handlerErr) {
 					ignoreErr = handlerErr
 					handlerErr = nil
 				}

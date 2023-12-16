@@ -3,6 +3,8 @@ package nsq
 import (
 	"context"
 	"fmt"
+	"github.com/avast/retry-go/v4"
+	baseError "github.com/go-tron/base-error"
 	"github.com/go-tron/logger"
 	"github.com/go-tron/tracer"
 	"testing"
@@ -13,39 +15,42 @@ func TestConsumer(t *testing.T) {
 	_, closer := tracer.NewJaeger("nsq-test", "127.0.0.1:9411")
 	defer closer.Close()
 
-	var retryDelays = []time.Duration{
-		0,
-		time.Second * 1,
-		time.Second * 2,
-		time.Second * 3,
-		time.Second * 4,
-		time.Second * 5,
-		time.Second * 6,
-	}
+	//var retryDelays = []time.Duration{
+	//	0,
+	//	time.Second * 1,
+	//	time.Second * 2,
+	//	time.Second * 3,
+	//	time.Second * 4,
+	//	time.Second * 5,
+	//	time.Second * 6,
+	//}
 	var i = 0
 	_, err := NewConsumer(&ConsumerConfig{
 		NsqLookUpAddr: "127.0.0.1:4161",
 		Channel:       "test-01",
 		Topic:         "test-topic",
 		//Retry:            NewRetry(time.Second*1, time.Second*1, 5),
-		MaxInFlight:      200,
-		Concurrent:       true,
-		RetryMaxAttempts: 10,
-		RetryStrategy: func(attempts uint16) (delay time.Duration) {
-			var i = int(attempts)
-			if i > len(retryDelays)-1 {
-				i = len(retryDelays) - 1
-			}
-			return retryDelays[i]
+		MaxInFlight: 200,
+		Concurrent:  true,
+		Retry:       NewRetry(time.Second, time.Second, 10),
+		LocalRetry: func(n uint, err error, config *retry.Config) time.Duration {
+			return time.Millisecond * 200
 		},
+		LocalRetryAttempts: 10,
+		//RetryStrategy: func(attempts uint16) (delay time.Duration) {
+		//	var i = int(attempts)
+		//	if i > len(retryDelays)-1 {
+		//		i = len(retryDelays) - 1
+		//	}
+		//	return retryDelays[i]
+		//},
 		BackoffDisabled: true,
 		NsqLogger:       logger.NewZap("nsq-consumer", "error"),
 		MsgLogger:       logger.NewZap("mq-consumer", "info"),
 		Handler: func(ctx context.Context, msg []byte, finished bool) error {
 			i++
 			fmt.Println("msg", i, string(msg))
-			time.Sleep(time.Second * 10)
-			return nil
+			return baseError.System("1", "asd")
 		},
 	})
 	if err != nil {

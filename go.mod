@@ -3,7 +3,8 @@ module github.com/go-tron/nsq
 go 1.19
 
 require (
-	github.com/go-tron/base-error v1.0.1
+	github.com/avast/retry-go/v4 v4.5.1
+	github.com/go-tron/base-error v1.0.2
 	github.com/go-tron/config v1.0.0
 	github.com/go-tron/logger v1.0.1
 	github.com/go-tron/tracer v1.0.1
@@ -13,7 +14,6 @@ require (
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/go-tron/random v1.0.0 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect

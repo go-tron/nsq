@@ -39,6 +39,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
+github.com/avast/retry-go/v4 v4.5.1 h1:AxIx0HGi4VZ3I02jr78j5lZ3M6x1E0Ivxa6b0pUUh7o=
+github.com/avast/retry-go/v4 v4.5.1/go.mod h1:/sipNsvNB3RRuT5iNcb6h73nw3IBmXJ/H3XrCQYSOpc=
 github.com/benbjohnson/clock v1.3.0 h1:ip6w0uFQkncKQ979AypyG0ER7mqUSBdKLOgAle/AT8A=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
@@ -63,16 +65,14 @@ github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbS
 github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20191125211704-12ad95a8df72/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
-github.com/go-tron/base-error v1.0.0 h1:oPcqZOYUyShFfMBXYMgjcvMwyuJPsM0cCS126e/8yV4=
-github.com/go-tron/base-error v1.0.0/go.mod h1:TVV7i0UkqTQA1j4j8u0sORfTOA19oAurw4UkNF+jPbI=
 github.com/go-tron/base-error v1.0.1 h1:EEw1vdV5L9qHPUsRJoM3KIFbXLV/UKlPmyHtwrPCcQk=
 github.com/go-tron/base-error v1.0.1/go.mod h1:Tk1KDlx21R0cGvRJcOR+E2h12n2g2EUKfugRx6QHpeI=
+github.com/go-tron/base-error v1.0.2 h1:s8AAmxCYzcUJN28mIoF1fTrhkxihXCJzUx89rT+2unc=
+github.com/go-tron/base-error v1.0.2/go.mod h1:Tk1KDlx21R0cGvRJcOR+E2h12n2g2EUKfugRx6QHpeI=
 github.com/go-tron/config v1.0.0 h1:MNP7vRknVVR5nB8EVdXur6AiDSmV7qS477Zsw3SmQUU=
 github.com/go-tron/config v1.0.0/go.mod h1:UUwN9o4gV99daNdK+h+rnZneLI1SuRlQa9ibYqj8HcA=
 github.com/go-tron/logger v1.0.1 h1:mqW+c5wASbIMzG+yyr3D6b3CL+p3m0CWPJ+jlpySrfs=
 github.com/go-tron/logger v1.0.1/go.mod h1:fmQow1fkwi8BGrV7BRKpkEiCzEezgeh1pSHvYc8Hz6o=
-github.com/go-tron/random v1.0.0 h1:F/HJPQmzFlXCJ1XlEQn2jmJmzGkFRaaZiaUqMP4MmPs=
-github.com/go-tron/random v1.0.0/go.mod h1:5HNJWvQz+uYCEZZqJEuy/XyVgtz0CLEvlbSbexHmAZw=
 github.com/go-tron/tracer v1.0.1 h1:ZZbMyXKnfNrwEO2z+J1zDy8YMs0SPOM42J9NdymfJPU=
 github.com/go-tron/tracer v1.0.1/go.mod h1:T7bVzG9U4y8QdZAbbWbI2RFZNejbo71zIEWym5W6sL8=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
@@ -189,8 +189,8 @@ github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
-github.com/stretchr/testify v1.8.3 h1:RP3t2pwF7cMEbC1dqtB6poj3niw/9gnV4Cjg5oW5gtY=
 github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
+github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/subosito/gotenv v1.4.2 h1:X1TuBLAMDFbaTAChgCBLu3DU3UPyELpnF2jjJ2cz/S8=
 github.com/subosito/gotenv v1.4.2/go.mod h1:ayKnFf/c6rvx/2iiLrJUk1e6plDbT3edrFNGqEflhK0=
 github.com/uber/jaeger-client-go v2.30.0+incompatible h1:D6wyKGCecFaSRUpo8lCVbaOOb6ThwMmTEbhRwtKR97o=

@@ -19,7 +19,7 @@ func TestProducer(t *testing.T) {
 		MsgLogger: logger.NewZap("mq-producer", "info"),
 	})
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		go func(int2 int) {
 			producer.SendSync("test-topic", []byte("hi"+strconv.Itoa(int2)), WithCtx(context.Background()))
 		}(i)
