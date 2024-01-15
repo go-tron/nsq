@@ -2,6 +2,7 @@ package nsq
 
 import (
 	"context"
+	"github.com/avast/retry-go/v4"
 	"github.com/go-tron/logger"
 	"github.com/go-tron/tracer"
 	"strconv"
@@ -21,7 +22,9 @@ func TestProducer(t *testing.T) {
 
 	for i := 0; i < 1; i++ {
 		go func(int2 int) {
-			producer.SendSync("test-topic", []byte("hi"+strconv.Itoa(int2)), WithCtx(context.Background()))
+			producer.SendSync("test-topic", []byte("hi"+strconv.Itoa(int2)), WithCtx(context.Background()), WithLocalRetry(func(n uint, err error, config *retry.Config) time.Duration {
+				return time.Second
+			}, 2))
 		}(i)
 	}
 

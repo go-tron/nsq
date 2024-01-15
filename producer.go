@@ -2,6 +2,7 @@ package nsq
 
 import (
 	"context"
+	"github.com/avast/retry-go/v4"
 	"github.com/go-tron/config"
 	"github.com/go-tron/logger"
 	"github.com/nsqio/go-nsq"
@@ -92,6 +93,23 @@ func (p *Producer) SendSync(topic string, data []byte, opts ...SendOption) (err 
 		}
 	}()
 
+	if c.LocalRetry != nil {
+		if c.RetryAttempts == 0 {
+			c.RetryAttempts = 1
+		}
+		return retry.Do(
+			func() error {
+				if c.Delay != 0 {
+					return p.DeferredPublish(topic, c.Delay, data)
+				} else {
+					return p.Publish(topic, data)
+				}
+			},
+			retry.Attempts(c.RetryAttempts),
+			retry.DelayType(c.LocalRetry),
+			retry.LastErrorOnly(true),
+		)
+	}
 	if c.Delay != 0 {
 		return p.DeferredPublish(topic, c.Delay, data)
 	} else {
@@ -109,8 +127,10 @@ func (p *Producer) DeferredSendSync(topic string, delay time.Duration, data []by
 }
 
 type SendConfig struct {
-	Ctx   context.Context
-	Delay time.Duration
+	Ctx           context.Context
+	Delay         time.Duration
+	RetryAttempts uint
+	LocalRetry    retry.DelayTypeFunc
 }
 
 type SendOption func(*SendConfig)
@@ -123,5 +143,11 @@ func WithCtx(val context.Context) SendOption {
 func WithDelay(val time.Duration) SendOption {
 	return func(opts *SendConfig) {
 		opts.Delay = val
+	}
+}
+func WithLocalRetry(localRetry retry.DelayTypeFunc, attempts uint) SendOption {
+	return func(opts *SendConfig) {
+		opts.LocalRetry = localRetry
+		opts.RetryAttempts = attempts
 	}
 }
