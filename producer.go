@@ -146,7 +146,7 @@ func (p *Producer) SimpleSendSync(topic string, data string) (err error) {
 	return p.Publish(topic, []byte(data))
 }
 
-func (p *Producer) DeferredSendSync(topic string, delay time.Duration, data []byte, opts ...SendOption) error {
+func (p *Producer) DeferredSendSync(topic string, delay time.Duration, data interface{}, opts ...SendOption) error {
 	opts = append(opts, WithDelay(delay))
 	return p.SendSync(topic, data, opts...)
 }
