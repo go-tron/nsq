@@ -2,10 +2,12 @@ package nsq
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/avast/retry-go/v4"
 	"github.com/go-tron/config"
 	"github.com/go-tron/logger"
 	"github.com/nsqio/go-nsq"
+	"reflect"
 	"time"
 )
 
@@ -78,20 +80,43 @@ type Producer struct {
 	*nsq.Producer
 }
 
-func (p *Producer) SendSync(topic string, data []byte, opts ...SendOption) (err error) {
+func (p *Producer) MessageFormat(data interface{}) ([]byte, error) {
+	var body []byte
+	v := reflect.ValueOf(data)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Type() == reflect.TypeOf(body) {
+		body = data.([]byte)
+	} else {
+		if reflect.TypeOf(data).Kind() == reflect.String {
+			body = []byte(data.(string))
+		} else {
+			return json.Marshal(data)
+		}
+	}
+	return body, nil
+}
+
+func (p *Producer) SendSync(topic string, data interface{}, opts ...SendOption) (err error) {
 	c := &SendConfig{}
 	for _, apply := range opts {
 		apply(c)
 	}
 
+	body, err := p.MessageFormat(data)
 	defer func() {
 		if err != nil || p.MsgLoggerLevel == "info" {
-			p.MsgLogger.Info(string(data),
+			p.MsgLogger.Info(string(body),
 				p.MsgLogger.Field("topic", topic),
 				p.MsgLogger.Field("error", err),
 			)
 		}
 	}()
+	if err != nil {
+		return err
+	}
 
 	if c.LocalRetry != nil {
 		if c.RetryAttempts == 0 {
@@ -100,9 +125,9 @@ func (p *Producer) SendSync(topic string, data []byte, opts ...SendOption) (err 
 		return retry.Do(
 			func() error {
 				if c.Delay != 0 {
-					return p.DeferredPublish(topic, c.Delay, data)
+					return p.DeferredPublish(topic, c.Delay, body)
 				} else {
-					return p.Publish(topic, data)
+					return p.Publish(topic, body)
 				}
 			},
 			retry.Attempts(c.RetryAttempts),
@@ -111,9 +136,9 @@ func (p *Producer) SendSync(topic string, data []byte, opts ...SendOption) (err 
 		)
 	}
 	if c.Delay != 0 {
-		return p.DeferredPublish(topic, c.Delay, data)
+		return p.DeferredPublish(topic, c.Delay, body)
 	} else {
-		return p.Publish(topic, data)
+		return p.Publish(topic, body)
 	}
 }
 
